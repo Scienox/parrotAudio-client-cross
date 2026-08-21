@@ -5,16 +5,21 @@ from client import AudioClient
 class parrotAudioClient(toga.App):
     def startup(self):
         self.audio = AudioClient("192.168.0.86")
+
+        # Conteneur racine unique
+        self.root_box = toga.Box(style=Pack(direction="column", flex=1))
+
+        # --- VUE PRINCIPALE ---
         self.main_box = toga.Box(style=Pack(direction="column", padding=5))
         self.message_label = toga.Label('Réponse du serveur: ')
         self.response_text = toga.MultilineTextInput()
-        self.show_musics_button = toga.Button('Afficher les musiques', on_press=self.show_musics)
+
+        self.show_musics_button = toga.Button('Afficher les musiques', on_press=self.show_musics_action)
         self.add_music_button = toga.Button('Ajouter de la musique', on_press=self.add_music)
         self.show_queue_button = toga.Button('Afficher la file d\'attente', on_press=self.show_queue)
         self.play_music_button = toga.Button('Lire la musique', on_press=self.play_music)
         self.pause_music_button = toga.Button('Pause', on_press=self.pause_music)
         self.resume_music_button = toga.Button('Reprendre', on_press=self.resume_music)
-
         self.previous_music_button = toga.Button('Précédent', on_press=self.previous_music)
         self.next_music_button = toga.Button('Suivant', on_press=self.next_music)
 
@@ -26,46 +31,59 @@ class parrotAudioClient(toga.App):
         self.main_box.add(self.play_music_button)
         self.main_box.add(self.pause_music_button)
         self.main_box.add(self.resume_music_button)
-
         self.main_box.add(self.previous_music_button)
         self.main_box.add(self.next_music_button)
 
+        # --- VUE POPUP ---
+        self.popup_box = toga.Box(style=Pack(direction="column", padding=5))
+
+        # Affichage initial : Vue principale
+        self.root_box.add(self.main_box)
+
         self.main_window = toga.MainWindow(title=self.formal_name)
-        self.main_window.content = self.main_box
+        self.main_window.content = self.root_box
         self.main_window.show()
 
     def exec_cmd(self, cmd):
         feedback = self.audio.send(cmd)
         return feedback
 
-    def show_musics(self):
-        music_list = self.exec_cmd(self.audio.get_status()).splitlines()[1].split(':')[1].split('|')
-        return '\n'.join(music for music in music_list)
+    def get_music_list(self):
+        return self.exec_cmd(self.audio.get_status()).splitlines()[1].split(':')[1].split('|')
+
+    def show_musics_action(self, widget):
+        music_list = self.get_music_list()
+        self.response_text.value = '\n'.join(music for music in music_list)
+
+    def switch_view(self, new_view):
+        """Remplace le contenu du conteneur racine par la nouvelle vue."""
+        self.root_box.clear()
+        self.root_box.add(new_view)
 
     def add_music(self, widget):
-        self.show_music_popup()
+        # 1. Réinitialiser la popup box
+        self.popup_box.clear()
 
-    def show_music_popup(self):
-        music_list = self.show_musics().splitlines()
-        box = toga.Box(style=Pack(direction="column", padding=5))
-
+        # 2. Générer la liste des boutons
+        music_list = self.get_music_list()
         for music in music_list:
-            button = toga.Button(music, on_press=lambda widget, music=music: self.add_selected_music(music))
-            box.add(button)
+            button = toga.Button(
+                music, 
+                on_press=lambda widget, m=music: self.add_selected_music(m)
+            )
+            self.popup_box.add(button)
 
-        close_button = toga.Button('Annuler', on_press=self.close_popup)
-        box.add(close_button)
+        # 3. Ajouter le bouton d'annulation
+        cancel_button = toga.Button('Annuler', on_press=self.close_popup)
+        self.popup_box.add(cancel_button)
 
-        if hasattr(self, 'popup_box'):
-            self.main_box.remove(self.popup_box)
-
-        self.popup_box = box
-        self.main_box.add(self.popup_box)
+        # 4. Basculer l'affichage vers la popup box
+        self.switch_view(self.popup_box)
 
     def close_popup(self, widget=None):
-        if hasattr(self, 'popup_box'):
-            self.main_box.remove(self.popup_box)
-            del self.popup_box
+        # Réinitialiser la popup box et revenir à la vue principale
+        self.popup_box.clear()
+        self.switch_view(self.main_box)
 
     def add_selected_music(self, music):
         feedback = self.exec_cmd(self.audio.add_music(music))
