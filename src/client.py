@@ -58,6 +58,9 @@ class AudioClient:
     def resume(self):
         return "resume"
 
+    def previous_song(self):
+        return "previous"
+
     def next_song(self):
         return "next"
 
