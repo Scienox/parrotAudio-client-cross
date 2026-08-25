@@ -86,13 +86,16 @@ class parrotAudioClient(toga.App):
         # 1. Réinitialiser la popup box
         self.popup_box.clear()
         # 2. Générer la liste des boutons
-        queue_list = self.exec_cmd(self.audio.show_queue()).split(':\n')[1].split('|')
-        for i, music in enumerate(queue_list):
-            button = toga.Button(
-                music,
-                on_press=lambda widget, index=i: self.remove_index_music(index)
-            )
-            self.popup_box.add(button)
+        queue_list = self.exec_cmd(self.audio.show_queue()).split('\n', 1)
+        queue_list.pop(0)
+        queue_list = queue_list[0].split('|')
+        if len(queue_list[0]):
+            for i, music in enumerate(queue_list):
+                button = toga.Button(
+                    music,
+                    on_press=lambda widget, index=i: self.remove_index_music(index)
+                )
+                self.popup_box.add(button)
         
         # 3. Ajouter le bouton d'annulation
         cancel_button = toga.Button('Annuler', on_press=self.close_popup)
