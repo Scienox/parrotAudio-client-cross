@@ -16,6 +16,7 @@ class parrotAudioClient(toga.App):
 
         self.show_musics_button = toga.Button('Afficher les musiques', on_press=self.show_musics_action)
         self.add_music_button = toga.Button('Ajouter de la musique', on_press=self.add_music)
+        self.remove_music_button = toga.Button('Supprimer de la musique', on_press=self.remove_music)
         self.show_queue_button = toga.Button('Afficher la file d\'attente', on_press=self.show_queue)
         self.play_music_button = toga.Button('Lire la musique', on_press=self.play_music)
         self.pause_music_button = toga.Button('Pause', on_press=self.pause_music)
@@ -27,6 +28,7 @@ class parrotAudioClient(toga.App):
         self.main_box.add(self.response_text)
         self.main_box.add(self.show_musics_button)
         self.main_box.add(self.add_music_button)
+        self.main_box.add(self.remove_music_button)
         self.main_box.add(self.show_queue_button)
         self.main_box.add(self.play_music_button)
         self.main_box.add(self.pause_music_button)
@@ -80,6 +82,24 @@ class parrotAudioClient(toga.App):
         # 4. Basculer l'affichage vers la popup box
         self.switch_view(self.popup_box)
 
+    def remove_music(self, widget):
+        # 1. Réinitialiser la popup box
+        self.popup_box.clear()
+        # 2. Générer la liste des boutons
+        queue_list = self.exec_cmd(self.audio.show_queue()).split(':\n')[1].split('|')
+        for i, music in enumerate(queue_list):
+            button = toga.Button(
+                music,
+                on_press=lambda widget, index=i: self.remove_index_music(index)
+            )
+            self.popup_box.add(button)
+        
+        # 3. Ajouter le bouton d'annulation
+        cancel_button = toga.Button('Annuler', on_press=self.close_popup)
+        self.popup_box.add(cancel_button)
+        # 4. Basculer l'affichage vers la popup box
+        self.switch_view(self.popup_box)
+
     def close_popup(self, widget=None):
         # Réinitialiser la popup box et revenir à la vue principale
         self.popup_box.clear()
@@ -94,6 +114,12 @@ class parrotAudioClient(toga.App):
         queue_list = self.exec_cmd(self.audio.show_queue()).split('|')
         queue = "\n".join(music for music in queue_list)
         self.response_text.value = queue
+
+    def remove_index_music(self, index):
+        # Supprimer la musique à l'index spécifié
+        feedback = self.exec_cmd(self.audio.del_music(index))
+        self.response_text.value = f"Musique supprimée: {feedback}"
+        self.close_popup()
 
     def play_music(self, widget):
         feedback = self.exec_cmd(self.audio.play())

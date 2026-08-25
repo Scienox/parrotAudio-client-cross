@@ -39,6 +39,9 @@ class AudioClient:
         
     def add_music(self, music: str):
         return f"add:{music}"
+
+    def del_music(self, index):
+        return f"delete:{index}"
     
     def show_queue(self):
         return "show:queue"
